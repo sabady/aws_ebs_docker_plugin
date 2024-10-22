@@ -57,7 +57,7 @@ create_docker_volume() {
 
     # Create a Docker volume and link it to the EBS volume
     echo "Creating Docker volume linked to EBS volume $volume_id..."
-    docker volume create --driver=my-ebs-plugin --opt volume_id="$volume_id" "$DOCKER_VOLUME_NAME"
+    docker volume create --driver=ebs-plugin --opt volume_id="$volume_id" "$DOCKER_VOLUME_NAME"
     echo "Created Docker volume: $DOCKER_VOLUME_NAME"
 }
 
@@ -68,6 +68,12 @@ detach_volume() {
 
   echo "Detaching volume $volume_id from instance $instance_id..."
   aws ec2 detach-volume --volume-id "$volume_id" --region "$AWS_REGION" --force
+}
+
+# Function to get the volume ID from service labels
+get_volume_id_from_labels() {
+    local service_name="$1"
+    docker service inspect --format '{{ .Spec.TaskTemplate.Containers }}' "$service_name" | grep -oP 'ebs_volume_id=\K[^ ]+'
 }
 
 handle_node_shutdown() {
