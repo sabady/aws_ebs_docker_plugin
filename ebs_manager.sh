@@ -4,7 +4,6 @@
 
 SERVICE_NAME=$1
 
-# Ensure AWS CLI is configured
 AWS_REGION=${AWS_REGION:-"us-east-1"}
 AWS_PROFILE=${AWS_PROFILE:-"default"}
 VOLUME_SIZE=${VOLUME_SIZE:-"10"}  # Default volume size in GiB
@@ -24,7 +23,7 @@ check_volume_exists() {
 }
 
 # Function to create EBS volume
-create_volume() {
+create_ebs_volume() {
     echo "Creating a new EBS volume for service ${SERVICE_NAME}..."
     volume_id=$( \
     aws ec2 create-volume \
@@ -41,7 +40,7 @@ create_volume() {
 }
 
 # Function to attach volume
-attach_volume() {
+attach_ebs_volume() {
     local volume_id=$1
     local instance_id=$(curl -s http://169.254.169.254/latest/meta-data/instance-id)
 
@@ -51,8 +50,7 @@ attach_volume() {
     docker service update --label-add ebs_volume_id="$volume_id" ${SERVICE_NAME}
 }
 
-# Function to create a Docker volume using the EBS volume_id
-#
+# Functions to create a Docker volume using the EBS volume_id
 get_docker_volume_name() {
     echo "Retrieving Docker volume name from service configuration..."
     DOCKER_VOLUME_NAME=$(docker service inspect --format '{{range .Spec.TaskTemplate.Containers}}{{.Mounts}}{{end}}' "$SERVICE_NAME" | grep -oP '(?<=Source:).*?(?=,)' | tr -d ' ')
@@ -74,14 +72,14 @@ create_docker_volume() {
     echo "Created Docker volume: $DOCKER_VOLUME_NAME"
 }
 
-attach_volume_to_service() {
+attach_docker_volume_to_service() {
     echo "Attaching Docker volume $DOCKER_VOLUME_NAME to service $SERVICE_NAME..."
     docker service update --mount-add type=volume,source="$DOCKER_VOLUME_NAME",target=/path/in/container "$SERVICE_NAME"
     echo "Docker volume $DOCKER_VOLUME_NAME attached to service $SERVICE_NAME."
 }
 
 # Function to detach volume
-detach_volume() {
+detach_ebs_volume() {
   local volume_id="$1"
   local instance_id="$2"
 
@@ -90,7 +88,7 @@ detach_volume() {
 }
 
 # Function to get the volume ID from service labels
-get_volume_id_from_labels() {
+get_ebs_volume_id_from_labels() {
     local service_name="$1"
     docker service inspect --format '{{ .Spec.TaskTemplate.Containers }}' "$service_name" | grep -oP 'ebs_volume_id=\K[^ ]+'
 }
@@ -103,17 +101,8 @@ handle_node_shutdown() {
 
   # Detach all attached volumes (if necessary)
   for volume_id in $(aws ec2 describe-volumes --filters Name=attachment.instance-id,Values="$instance_id" --query "Volumes[].VolumeId" --output text); do
-    detach_volume "$volume_id" "$instance_id"
+    detach_ebs_volume "$volume_id" "$instance_id"
   done
-}
-
-# Function to manage services
-manage_service() {
-  # Placeholder for service management logic.
-  # This could include checking if the service needs an EBS volume and managing it accordingly.
-
-  # For example, detect services and attach volumes as needed
-  # This part can be expanded to include actual logic for checking services and their volume requirements
 }
 
 # Main logic

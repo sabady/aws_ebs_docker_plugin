@@ -1,5 +1,5 @@
 # Build the Docker plugin
-REGISTRY="harbor.belong.life"
+REGISTRY=""
 REPOSITORY="devops/ebs-plugin"
 MULTIARCH="linux/arm64,linux/amd64"
 

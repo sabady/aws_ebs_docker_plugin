@@ -5,7 +5,6 @@ If the volume exists there will be a service label, and the plugin will attach i
 
 ## Docker Service Configuration
 ```
-version: '3.8'
 services:
   my-service:
     image: my-image
