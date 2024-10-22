@@ -1,4 +1,6 @@
-# Docker Service Configuration
+# Docker plugin that handles AWS EBS volume attachment to Docker Swarm Services
+
+## Docker Service Configuration
 ```
 version: '3.8'
 services:
@@ -13,7 +15,7 @@ volumes:
       volume_id: vol-12345678 # Example volume ID to attach
 ```
 
-# IAM Role for EBS Permissions
+## IAM Role for EBS Permissions
 ```
 {
     "Effect": "Allow",
