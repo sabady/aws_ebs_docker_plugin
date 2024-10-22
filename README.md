@@ -1,4 +1,4 @@
-# Docker plugin that handles AWS EBS volume attachment to Docker Swarm Services
+# Multi Arch Docker plugin that handles AWS EBS volume attachment to Docker Swarm Services
 
 ## Docker Service Configuration
 ```
