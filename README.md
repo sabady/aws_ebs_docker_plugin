@@ -1,4 +1,5 @@
 # Docker Service Configuration
+```
 version: '3.8'
 services:
   my-service:
@@ -10,9 +11,10 @@ volumes:
     driver: my-ebs-plugin
     driver_opts:
       volume_id: vol-12345678 # Example volume ID to attach
-
+```
 
 # IAM Role for EBS Permissions
+```
 {
     "Effect": "Allow",
     "Action": [
@@ -25,3 +27,4 @@ volumes:
     ],
     "Resource": "*"
 }
+```
