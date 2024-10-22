@@ -10,9 +10,9 @@ services:
   my-service:
     image: my-image
     volumes:
-      - my-ebs-volume:/data
+      - ebs-volume:/data
 volumes:
-  my-ebs-volume:
+  ebs-volume:
     driver: ebs-plugin
 #    driver_opts:
 #      volume_id: vol-12345678 # Example volume ID to attach

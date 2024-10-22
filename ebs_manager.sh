@@ -51,7 +51,20 @@ attach_volume() {
     docker service update --label-add ebs_volume_id="$volume_id" ${SERVICE_NAME}
 }
 
-# Function to create a Docker volume using the EBS volume
+# Function to create a Docker volume using the EBS volume_id
+#
+get_docker_volume_name() {
+    echo "Retrieving Docker volume name from service configuration..."
+    DOCKER_VOLUME_NAME=$(docker service inspect --format '{{range .Spec.TaskTemplate.Containers}}{{.Mounts}}{{end}}' "$SERVICE_NAME" | grep -oP '(?<=Source:).*?(?=,)' | tr -d ' ')
+    
+    if [ -z "$DOCKER_VOLUME_NAME" ]; then
+        echo "No Docker volume name found in service configuration. Exiting..."
+        exit 1
+    fi
+    
+    echo "Docker volume name retrieved: $DOCKER_VOLUME_NAME"
+}
+
 create_docker_volume() {
     local volume_id="$1"
 
@@ -59,6 +72,12 @@ create_docker_volume() {
     echo "Creating Docker volume linked to EBS volume $volume_id..."
     docker volume create --driver=ebs-plugin --opt volume_id="$volume_id" "$DOCKER_VOLUME_NAME"
     echo "Created Docker volume: $DOCKER_VOLUME_NAME"
+}
+
+attach_volume_to_service() {
+    echo "Attaching Docker volume $DOCKER_VOLUME_NAME to service $SERVICE_NAME..."
+    docker service update --mount-add type=volume,source="$DOCKER_VOLUME_NAME",target=/path/in/container "$SERVICE_NAME"
+    echo "Docker volume $DOCKER_VOLUME_NAME attached to service $SERVICE_NAME."
 }
 
 # Function to detach volume
