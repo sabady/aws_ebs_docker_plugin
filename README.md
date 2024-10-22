@@ -11,8 +11,8 @@ services:
 volumes:
   my-ebs-volume:
     driver: my-ebs-plugin
-    driver_opts:
-      volume_id: vol-12345678 # Example volume ID to attach
+#    driver_opts:
+#      volume_id: vol-12345678 # Example volume ID to attach
 ```
 
 ## IAM Role for EBS Permissions

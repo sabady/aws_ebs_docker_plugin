@@ -7,23 +7,37 @@ SERVICE_NAME=$1
 # Ensure AWS CLI is configured
 AWS_REGION=${AWS_REGION:-"us-east-1"}
 AWS_PROFILE=${AWS_PROFILE:-"default"}
+VOLUME_SIZE=${VOLUME_SIZE:-"10"}  # Default volume size in GiB
 
 # Function to check if volume exists
 check_volume_exists() {
-    local volume_id
+    local volume_id="$1"
     volume_id=$(aws ec2 describe-volumes --filters Name=tag:Name,Values=${SERVICE_NAME} --query "Volumes[0].VolumeId" --region ${AWS_REGION} --profile ${AWS_PROFILE} --output text)
+    if [ "$volume_id" == "None" ]; then
+        echo "No existing EBS volume found. Creating a new one..."
+        volume_id=$(create_ebs_volume "${SERVICE_NAME}")
+    else
+        echo "Found existing EBS volume: $volume_id"
+    fi 
+
     echo "$volume_id"
 }
 
 # Function to create EBS volume
 create_volume() {
     echo "Creating a new EBS volume for service ${SERVICE_NAME}..."
+    volume_id=$( \
     aws ec2 create-volume \
         --volume-type gp3 \
-        --size 20 \
+        --size "$VOLUME_SIZE" \
         --availability-zone $(aws ec2 describe-availability-zones --query "AvailabilityZones[0].ZoneName" --output text --region ${AWS_REGION}) \
         --tag-specifications "ResourceType=volume,Tags=[{Key=Name,Value=${SERVICE_NAME}}]" \
-        --region ${AWS_REGION} --profile ${AWS_PROFILE}
+        --region ${AWS_REGION} --profile ${AWS_PROFILE} \
+        --query "VolumeId" \
+        --output text \
+    )
+
+    echo "$volume_id"  # Return the volume ID
 }
 
 # Function to attach volume
@@ -33,6 +47,18 @@ attach_volume() {
 
     echo "Attaching volume ${volume_id} to instance ${instance_id}..."
     aws ec2 attach-volume --volume-id $volume_id --instance-id $instance_id --device /dev/xvdf --region ${AWS_REGION} --profile ${AWS_PROFILE}
+    # Store the volume ID
+    docker service update --label-add ebs_volume_id="$volume_id" ${SERVICE_NAME}
+}
+
+# Function to create a Docker volume using the EBS volume
+create_docker_volume() {
+    local volume_id="$1"
+
+    # Create a Docker volume and link it to the EBS volume
+    echo "Creating Docker volume linked to EBS volume $volume_id..."
+    docker volume create --driver=my-ebs-plugin --opt volume_id="$volume_id" "$DOCKER_VOLUME_NAME"
+    echo "Created Docker volume: $DOCKER_VOLUME_NAME"
 }
 
 # Function to detach volume
